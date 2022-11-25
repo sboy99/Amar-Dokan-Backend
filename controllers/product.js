@@ -4,7 +4,8 @@ const cloudinary = require("cloudinary").v2;
 
 //TODO > Pagination,Query,etc
 const getAllProducts = async (req, res) => {
-  const { select, sort, name, type, freeShipping, price } = req.query;
+  const { select, sort, name, type, freeShipping, price, limit, page } =
+    req.query;
   const queryObj = {};
 
   if (name) {
@@ -18,7 +19,31 @@ const getAllProducts = async (req, res) => {
     queryObj.freeShipping = true;
   }
 
-  const result = Product.find(queryObj);
+  // Pagination..
+  const currentPage = parseInt(page) || 0;
+  const productLimit = parseInt(limit) || 10;
+
+  const payload = {}; // Data to send as a response
+  payload.count = await Product.countDocuments().exec();
+
+  const startIndex = currentPage * productLimit;
+  const endIndex = (currentPage + 1) * productLimit;
+
+  if (startIndex > 0) {
+    payload.previous = {
+      page: currentPage - 1,
+      limit: productLimit,
+    };
+  }
+
+  if (endIndex < payload.count) {
+    payload.next = {
+      page: currentPage + 1,
+      limit: productLimit,
+    };
+  }
+
+  const result = Product.find(queryObj).skip(startIndex).limit(productLimit);
 
   if (sort) {
     const sortList = sort.split(",").join(" ");
@@ -31,8 +56,10 @@ const getAllProducts = async (req, res) => {
   } else result.select("-__v -createdAt -updatedAt -creatorId");
 
   const products = await result.populate("category", "name subCategories");
+  payload.data = products;
+  payload.limit = productLimit;
 
-  res.status(200).json({ count: products.length, products });
+  res.status(200).json(payload);
 };
 
 //> Get Single Product by ID
