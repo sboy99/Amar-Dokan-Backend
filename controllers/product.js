@@ -4,11 +4,85 @@ const cloudinary = require("cloudinary").v2;
 
 //TODO > Pagination,Query,etc
 const getAllProducts = async (req, res) => {
-  const products = await Product.find({}).populate(
-    "category",
-    "name type subCategories"
-  );
-  res.status(200).json({ count: products.length, products });
+  const { select, sort, name, type, freeShipping, filter, limit, page } =
+    req.query;
+  const queryObj = {};
+
+  // Searching
+  if (name) {
+    queryObj.name = { $regex: name, $options: "i" };
+  }
+  if (type) {
+    queryObj.type = { $regex: type, $options: "i" };
+  }
+  if (freeShipping === `true`) {
+    queryObj.freeShipping = true;
+  }
+
+  // Filtering
+  if (filter) {
+    const numericTranslator = {
+      "<": "$lt",
+      "<=": "$lte",
+      "=": "$eq",
+      ">": "$gt",
+      "<=": "$gte",
+    };
+    const CONVERTER_REGEX = /\b(>|>=|<|<=|=)\b/g;
+    let filteredString = filter.replace(
+      CONVERTER_REGEX,
+      (match) => `-${numericTranslator[match]}-`
+    );
+    const supportedFields = ["price", "averageReviews"];
+    filteredString.split(`,`).forEach((exp) => {
+      const [field, operator, value] = exp.split("-");
+      if (supportedFields.includes(field)) {
+        queryObj[field] = { [operator]: Number(value) };
+      }
+    });
+  }
+
+  // Pagination..
+  const currentPage = parseInt(page) || 0;
+  const productLimit = parseInt(limit) || 10;
+
+  const payload = {}; // Data to send as a response
+  payload.count = await Product.countDocuments().exec();
+
+  const startIndex = currentPage * productLimit;
+  const endIndex = (currentPage + 1) * productLimit;
+
+  if (startIndex > 0) {
+    payload.previous = {
+      page: currentPage - 1,
+      limit: productLimit,
+    };
+  }
+
+  if (endIndex < payload.count) {
+    payload.next = {
+      page: currentPage + 1,
+      limit: productLimit,
+    };
+  }
+
+  const result = Product.find(queryObj).skip(startIndex).limit(productLimit);
+
+  if (sort) {
+    const sortList = sort.split(",").join(" ");
+    result.sort(sortList);
+  } else result.sort("name");
+
+  if (select) {
+    const selectList = select.split(",").join(" ");
+    result.select(`${selectList} -__v -createdAt -updatedAt -creatorId`);
+  } else result.select("-__v -createdAt -updatedAt -creatorId");
+
+  const products = await result.populate("category", "name subCategories");
+  payload.data = products;
+  payload.limit = productLimit;
+
+  res.status(200).json(payload);
 };
 
 //> Get Single Product by ID
@@ -21,7 +95,6 @@ const getSingleProduct = async (req, res) => {
 
 //> Create new product
 const createProduct = async (req, res) => {
-  console.log(req.body);
   const product = await Product.create({
     ...req.body,
     creatorId: req.user.userId,
