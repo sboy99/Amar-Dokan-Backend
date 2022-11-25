@@ -4,10 +4,34 @@ const cloudinary = require("cloudinary").v2;
 
 //TODO > Pagination,Query,etc
 const getAllProducts = async (req, res) => {
-  const products = await Product.find({}).populate(
-    "category",
-    "name type subCategories"
-  );
+  const { select, sort, name, type, freeShipping, price } = req.query;
+  const queryObj = {};
+
+  if (name) {
+    queryObj.name = { $regex: name, $options: "i" };
+  }
+  if (type) {
+    queryObj.type = { $regex: type, $options: "i" };
+  }
+
+  if (freeShipping === `true`) {
+    queryObj.freeShipping = true;
+  }
+
+  const result = Product.find(queryObj);
+
+  if (sort) {
+    const sortList = sort.split(",").join(" ");
+    result.sort(sortList);
+  } else result.sort("name");
+
+  if (select) {
+    const selectList = select.split(",").join(" ");
+    result.select(`${selectList} -__v -createdAt -updatedAt -creatorId`);
+  } else result.select("-__v -createdAt -updatedAt -creatorId");
+
+  const products = await result.populate("category", "name subCategories");
+
   res.status(200).json({ count: products.length, products });
 };
 
