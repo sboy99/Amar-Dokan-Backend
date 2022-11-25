@@ -4,19 +4,42 @@ const cloudinary = require("cloudinary").v2;
 
 //TODO > Pagination,Query,etc
 const getAllProducts = async (req, res) => {
-  const { select, sort, name, type, freeShipping, price, limit, page } =
+  const { select, sort, name, type, freeShipping, filter, limit, page } =
     req.query;
   const queryObj = {};
 
+  // Searching
   if (name) {
     queryObj.name = { $regex: name, $options: "i" };
   }
   if (type) {
     queryObj.type = { $regex: type, $options: "i" };
   }
-
   if (freeShipping === `true`) {
     queryObj.freeShipping = true;
+  }
+
+  // Filtering
+  if (filter) {
+    const numericTranslator = {
+      "<": "$lt",
+      "<=": "$lte",
+      "=": "$eq",
+      ">": "$gt",
+      "<=": "$gte",
+    };
+    const CONVERTER_REGEX = /\b(>|>=|<|<=|=)\b/g;
+    let filteredString = filter.replace(
+      CONVERTER_REGEX,
+      (match) => `-${numericTranslator[match]}-`
+    );
+    const supportedFields = ["price", "averageReviews"];
+    filteredString.split(`,`).forEach((exp) => {
+      const [field, operator, value] = exp.split("-");
+      if (supportedFields.includes(field)) {
+        queryObj[field] = { [operator]: Number(value) };
+      }
+    });
   }
 
   // Pagination..
@@ -72,7 +95,6 @@ const getSingleProduct = async (req, res) => {
 
 //> Create new product
 const createProduct = async (req, res) => {
-  console.log(req.body);
   const product = await Product.create({
     ...req.body,
     creatorId: req.user.userId,
