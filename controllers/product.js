@@ -2,7 +2,7 @@ const err = require("../errors");
 const Product = require("../model/product");
 const cloudinary = require("cloudinary").v2;
 
-//TODO > Pagination,Query,etc
+//> Pagination,Query,etc
 const getAllProducts = async (req, res) => {
   const { select, sort, name, type, freeShipping, filter, limit, page } =
     req.query;
@@ -78,7 +78,7 @@ const getAllProducts = async (req, res) => {
     result.select(`${selectList} -__v -createdAt -updatedAt -creatorId`);
   } else result.select("-__v -createdAt -updatedAt -creatorId");
 
-  const products = await result.populate("category", "name subCategories");
+  const products = await result;
   payload.data = products;
   payload.limit = productLimit;
 
