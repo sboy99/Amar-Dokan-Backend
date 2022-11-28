@@ -106,25 +106,13 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   //retrive id from params
   const { id: productId } = req.params;
-  //retrive image from body
-  const { image, imagePublicId } = req.body;
-  //search for the item in database
-  const product = await Product.findOne({ _id: productId });
-  if (!product) {
-    //if product not ofund but image is uploaded,destroy the image
-    if (image) await cloudinary.uploader.destroy(imagePublicId);
-    throw new err.NOT_FOUND(`No product found with id:${productId}`);
-  }
-  //if user updates image destroy previous image
-  if (image) await cloudinary.uploader.destroy(product.imagePublicId);
-  //update all provided details
-  const modifiedProduct = await Product.findOneAndUpdate(
+  const data = await Product.findOneAndUpdate(
     { _id: productId },
     { ...req.body, creatorId: req.user.userId },
     { new: true }
   );
   //send successful response to user
-  res.status(200).json(modifiedProduct);
+  res.status(200).json({ data, message: `Product updated successfully` });
 };
 
 const deleteProduct = async (req, res) => {

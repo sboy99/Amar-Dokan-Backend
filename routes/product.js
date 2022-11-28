@@ -10,7 +10,8 @@ const upload = multer({
 
 //> Validation Schemas <//
 const {
-  productValidationSchema,
+  createProductValidationSchema,
+  updateProductValidationSchema,
   paramsValidationSchema,
 } = require("../model/validation");
 
@@ -40,7 +41,7 @@ router
   .post(
     authintication,
     hasPermission("admin"),
-    validateData(productValidationSchema),
+    validateData(createProductValidationSchema),
     createProduct
   );
 
@@ -62,9 +63,7 @@ router
     authintication,
     hasPermission("admin"),
     validateParams(paramsValidationSchema),
-    // multerUpload("image", "/Product", 1),
-    // uploadProductImage,
-    validateData(productValidationSchema),
+    validateData(updateProductValidationSchema),
     updateProduct
   )
   .delete(

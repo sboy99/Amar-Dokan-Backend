@@ -18,7 +18,7 @@ const paramsValidationSchema = yup.object({
   id: yup.string().required().matches(mongodbObjectId, `invalid id`),
 });
 
-const productValidationSchema = yup.object({
+const createProductValidationSchema = yup.object({
   name: yup.string().required(`name shouldn't be empty`),
   price: yup
     .number()
@@ -49,6 +49,33 @@ const productValidationSchema = yup.object({
     .string()
     .required(`please select a category`)
     .matches(mongodbObjectId, `provide a valid category`),
+  subCategories: yup.array(
+    yup
+      .string()
+      .min(2, `Child category should be atleast 2 letters long`)
+      .max(30, `Child category should not be exceeded 30 characters`)
+  ),
+  freeShipping: yup.boolean(),
+  published: yup.boolean(),
+});
+const updateProductValidationSchema = yup.object({
+  name: yup.string(),
+  price: yup.number().min(0, `price can't be negetive`),
+  image: yup
+    .array(
+      yup.object({
+        id: yup.string().required(`Public id is required`),
+        url: yup.string().required(`Image URL is required`),
+      })
+    )
+    .min(5, `Minimum select atleast five images`)
+    .max(8, `Maximum image limit is eight`),
+  description: yup.string().min(256, `description length sould be atleast 256`),
+  inventory: yup.number().min(1, `stock size should be atleast 1`),
+  type: yup
+    .string()
+    .oneOf(validCategoryTypes, `Selected type didn't match existing types`),
+  category: yup.string().matches(mongodbObjectId, `provide a valid category`),
   subCategories: yup.array(
     yup
       .string()
@@ -110,7 +137,8 @@ const updateCategoryValidationSchema = yup.object({
 });
 
 module.exports = {
-  productValidationSchema,
+  createProductValidationSchema,
+  updateProductValidationSchema,
   paramsValidationSchema,
   userValidationSchema,
   createCategoryValidationSchema,
