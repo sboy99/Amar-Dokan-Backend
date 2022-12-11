@@ -118,13 +118,13 @@ const updateProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   const { id: productId } = req.params;
 
-  const product = await Product.findOne({ _id: productId }).select(
-    "imagePublicId"
-  );
+  const product = await Product.findOne({ _id: productId }).select("images");
   if (!product)
     throw new err.NOT_FOUND(`No product found with id:${productId}`);
-  await cloudinary.uploader.destroy(product?.imagePublicId);
-  product.remove();
+  product.images.forEach(
+    async (img) => await cloudinary.uploader.destroy(img.id)
+  );
+  await product.remove();
   res.status(200).json({ message: `Product removed successfully` });
 };
 
@@ -140,7 +140,6 @@ const uploadProductImage = async (req, res) => {
 
 const deleteProductImage = async (req, res) => {
   const { id } = req.query;
-  console.log(id);
   await cloudinary.uploader.destroy(id);
   res.status(200).json({ message: `Image successfully deleted` });
 };
